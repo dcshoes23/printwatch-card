@@ -6,6 +6,7 @@ import { formatDuration, formatEndTime } from '../utils/formatters';
 import { isPrinting, isPaused, getAmsSlots, getEntityStates, getCameraEntityType } from '../utils/state-helpers';
 import { DEFAULT_CONFIG, DEFAULT_CAMERA_REFRESH_RATE } from '../constants/config';
 import { localize } from '../utils/localize';
+import { discoverPrinterEntities, discoverAMSEntities, discoverExternalSpoolEntity } from '../utils/device-helpers';
 
 class PrintWatchCard extends LitElement {
   static get properties() {
@@ -42,8 +43,69 @@ class PrintWatchCard extends LitElement {
     if (!config.printer_name) {
       throw new Error('Please define printer_name');
     }
-    this.config = { ...DEFAULT_CONFIG, ...config };
+
+    // Check if using new device-based config or legacy entity-based config
+    if (config.printer_device) {
+      // New device-based configuration
+      this._configMode = 'device';
+      this._rawConfig = config;
+      // Entity discovery will happen when hass is available
+      this.config = { ...DEFAULT_CONFIG, printer_name: config.printer_name };
+    } else {
+      // Legacy entity-based configuration
+      this._configMode = 'entity';
+      this.config = { ...DEFAULT_CONFIG, ...config };
+    }
+
     this._cameraUpdateInterval = config.camera_refresh_rate || DEFAULT_CAMERA_REFRESH_RATE;
+  }
+
+  updated(changedProps) {
+    super.updated(changedProps);
+
+    // Discover entities from devices when hass becomes available
+    if (changedProps.has('hass') && this._configMode === 'device' && this._rawConfig && this.hass) {
+      this._discoverEntitiesFromDevices();
+    }
+
+    if (changedProps.has('hass')) {
+      if (this.shouldUpdateCamera()) {
+        this._updateCameraFeed();
+      }
+    }
+  }
+
+  _discoverEntitiesFromDevices() {
+    const { printer_device, ams_devices, external_spool_device } = this._rawConfig;
+
+    let discoveredEntities = {};
+
+    // Discover printer entities
+    if (printer_device && this.hass.entities) {
+      const printerEntities = discoverPrinterEntities(this.hass, printer_device);
+      discoveredEntities = { ...discoveredEntities, ...printerEntities };
+    }
+
+    // Discover AMS entities
+    if (ams_devices && Array.isArray(ams_devices) && ams_devices.length > 0 && this.hass.entities) {
+      const amsEntities = discoverAMSEntities(this.hass, ams_devices);
+      discoveredEntities = { ...discoveredEntities, ...amsEntities };
+    }
+
+    // Discover external spool entity
+    if (external_spool_device && this.hass.entities) {
+      const spoolEntities = discoverExternalSpoolEntity(this.hass, external_spool_device);
+      discoveredEntities = { ...discoveredEntities, ...spoolEntities };
+    }
+
+    // Merge with defaults and raw config
+    this.config = {
+      ...DEFAULT_CONFIG,
+      ...this._rawConfig,
+      ...discoveredEntities
+    };
+
+    console.log('[PrintWatch] Discovered entities from devices:', discoveredEntities);
   }
 
   isOnline() {
@@ -96,14 +158,6 @@ class PrintWatchCard extends LitElement {
     });
   }
 
-  updated(changedProps) {
-    super.updated(changedProps);
-    if (changedProps.has('hass')) {
-      if (this.shouldUpdateCamera()) {
-        this._updateCameraFeed();
-      }
-    }
-  }
 
   _updateCameraFeed() {
     if (!this.isOnline()) {
@@ -211,6 +265,21 @@ class PrintWatchCard extends LitElement {
   // This is used by Home Assistant for card size calculation
   getCardSize() {
     return 6;
+  }
+
+  // Enable visual UI editor
+  static getConfigElement() {
+    return document.createElement('printwatch-card-editor');
+  }
+
+  // Provide stub config for the card picker
+  static getStubConfig() {
+    return {
+      printer_name: 'My 3D Printer',
+      printer_device: '',
+      ams_devices: [],
+      camera_refresh_rate: 1000
+    };
   }
 }
 
