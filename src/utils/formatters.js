@@ -1,30 +1,56 @@
 /**
  * Format duration into human readable format
- * Duration entities in Home Assistant provide values in seconds
- * @param {string|number} duration - Duration in seconds (from HA duration entity)
+ * Duration entities in Home Assistant provide values with a unit_of_measurement
+ * @param {string|number} duration - Duration value from entity
+ * @param {string} unit - Unit of measurement (h, min, s)
  * @param {object} options - Formatting options
  * @returns {string} Formatted duration string
  */
-export const formatDuration = (duration, options = {}) => {
+export const formatDuration = (duration, unit = 'min', options = {}) => {
   const {
     showComplete = true,
     completeText = 'Complete'
   } = options;
 
-  // Parse the duration value as seconds
-  let totalSeconds;
+  // Parse the duration value
+  let value;
 
   if (typeof duration === 'string') {
-    totalSeconds = parseFloat(duration);
+    value = parseFloat(duration);
   } else if (typeof duration === 'number') {
-    totalSeconds = duration;
+    value = duration;
   } else {
     return showComplete ? completeText : '0m';
   }
 
   // Handle invalid or zero values
-  if (isNaN(totalSeconds) || totalSeconds <= 0) {
+  if (isNaN(value) || value <= 0) {
     return showComplete ? completeText : '0m';
+  }
+
+  // Convert to seconds based on unit
+  let totalSeconds;
+  switch (unit) {
+    case 'h':
+    case 'hr':
+    case 'hour':
+    case 'hours':
+      totalSeconds = value * 3600;
+      break;
+    case 'min':
+    case 'minute':
+    case 'minutes':
+      totalSeconds = value * 60;
+      break;
+    case 's':
+    case 'sec':
+    case 'second':
+    case 'seconds':
+      totalSeconds = value;
+      break;
+    default:
+      // Default to minutes if unknown unit
+      totalSeconds = value * 60;
   }
 
   const hours = Math.floor(totalSeconds / 3600);
