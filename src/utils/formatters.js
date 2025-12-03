@@ -1,53 +1,29 @@
 /**
- * Parse ISO 8601 duration string into total seconds
- * @param {string} duration - ISO 8601 duration string (e.g., "PT2H34M12S")
- * @returns {number} Total seconds
- */
-const parseDuration = (duration) => {
-  if (!duration || typeof duration !== 'string') return 0;
-
-  // Handle ISO 8601 duration format (PT2H34M12S)
-  const iso8601Match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
-  if (iso8601Match) {
-    const hours = parseInt(iso8601Match[1] || 0);
-    const minutes = parseInt(iso8601Match[2] || 0);
-    const seconds = parseFloat(iso8601Match[3] || 0);
-    return hours * 3600 + minutes * 60 + seconds;
-  }
-
-  // Try parsing as number (assuming seconds)
-  const numValue = parseFloat(duration);
-  if (!isNaN(numValue)) {
-    return numValue;
-  }
-
-  return 0;
-};
-
-/**
  * Format duration into human readable format
- * @param {string|number} duration - Duration string (ISO 8601) or number (seconds/minutes)
+ * Duration entities in Home Assistant provide values in seconds
+ * @param {string|number} duration - Duration in seconds (from HA duration entity)
  * @param {object} options - Formatting options
  * @returns {string} Formatted duration string
  */
 export const formatDuration = (duration, options = {}) => {
   const {
     showComplete = true,
-    completeText = 'Complete',
-    isMinutes = false
+    completeText = 'Complete'
   } = options;
 
+  // Parse the duration value as seconds
   let totalSeconds;
 
   if (typeof duration === 'string') {
-    totalSeconds = parseDuration(duration);
+    totalSeconds = parseFloat(duration);
   } else if (typeof duration === 'number') {
-    totalSeconds = isMinutes ? duration * 60 : duration;
+    totalSeconds = duration;
   } else {
     return showComplete ? completeText : '0m';
   }
 
-  if (totalSeconds <= 0) {
+  // Handle invalid or zero values
+  if (isNaN(totalSeconds) || totalSeconds <= 0) {
     return showComplete ? completeText : '0m';
   }
 
@@ -55,12 +31,16 @@ export const formatDuration = (duration, options = {}) => {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = Math.floor(totalSeconds % 60);
 
+  // Format based on duration length
   if (hours > 0) {
+    // For hours, show minutes too if present
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
   if (minutes > 0) {
+    // For minutes, show seconds only if less than 5 minutes
     return seconds > 0 && minutes < 5 ? `${minutes}m ${seconds}s` : `${minutes}m`;
   }
+  // Less than a minute, show seconds
   return `${seconds}s`;
 };
 
