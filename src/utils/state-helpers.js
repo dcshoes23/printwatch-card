@@ -98,8 +98,40 @@ const getLastPrintName = (hass, config) => {
     : null;
 };
 
+/**
+ * Detects the type of camera entity
+ * @param {string} entityId - The camera entity ID
+ * @returns {'camera'|'image'} - The entity type
+ */
+export const getCameraEntityType = (entityId) => {
+  if (!entityId) return 'image';
+  return entityId.startsWith('camera.') ? 'camera' : 'image';
+};
+
+/**
+ * Gets the camera source URL based on entity type
+ * @param {Object} hass - Home Assistant object
+ * @param {string} entityId - The camera entity ID
+ * @param {string} entityType - The entity type ('camera' or 'image')
+ * @param {number} timestamp - Cache-busting timestamp (only used for image entities)
+ * @returns {string|null} - The camera source URL
+ */
+export const getCameraSource = (hass, entityId, entityType, timestamp = null) => {
+  if (!entityId || !hass.states[entityId]) return null;
+
+  if (entityType === 'camera') {
+    // For camera entities, use the camera proxy API
+    return `/api/camera_proxy/${entityId}`;
+  } else {
+    // For image entities, use entity_picture with cache-busting timestamp
+    const entityPicture = hass.states[entityId]?.attributes?.entity_picture;
+    if (!entityPicture) return null;
+    return timestamp ? `${entityPicture}&t=${timestamp}` : entityPicture;
+  }
+};
+
 export const getEntityStates = (hass, config) => {
-  const getState = (entity, defaultValue = '0') => 
+  const getState = (entity, defaultValue = '0') =>
     hass.states[entity]?.state || defaultValue;
 
   return {
