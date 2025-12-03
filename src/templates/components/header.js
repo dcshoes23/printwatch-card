@@ -1,6 +1,5 @@
 import { html } from 'lit';
 import { localize } from '../../utils/localize';
-import { formatDuration } from '../../utils/formatters';
 
 export const headerTemplate = (entities, controls) => html`
   <div class="header">
@@ -10,7 +9,7 @@ export const headerTemplate = (entities, controls) => html`
         ${localize.localize(`entity.sensor.state.${entities.status}`)}
         ${entities.isPrinting ? html`
           <span class="progress-text">
-            ${Math.round(entities.progress)}% | 
+            ${Math.round(entities.progress)}% |
             ${localize.t('print.layer')}: ${entities.currentLayer}/${entities.totalLayers}
           </span>
         ` : ''}
@@ -20,19 +19,19 @@ export const headerTemplate = (entities, controls) => html`
           <div class="progress-fill" style="width: ${entities.progress}%"></div>
         </div>
         <div class="layer-info">
-          ${localize.t('time.left')}: ${formatDuration(entities.remainingTime)}
+          ${localize.t('time.left')}: ${entities.remainingTime}
         </div>
       ` : ''}
     </div>
     <div class="header-controls">
-      <button 
-        class="icon-button ${controls.lightState === 'on' ? 'active' : ''}" 
+      <button
+        class="icon-button ${controls.lightState === 'on' ? 'active' : ''}"
         @click=${controls.onLightToggle}
       >
         <ha-icon icon="mdi:lightbulb"></ha-icon>
       </button>
       ${entities.aux_fan_entity ? html`
-        <button 
+        <button
           class="icon-button ${controls.fanState === 'on' ? 'active' : ''}"
           @click=${controls.onFanToggle}
         >

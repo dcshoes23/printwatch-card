@@ -180,7 +180,7 @@ export const getEntityStates = (hass, config) => {
     progress: parseFloat(getState(config.progress_entity)),
     currentLayer: parseInt(getState(config.current_layer_entity)),
     totalLayers: parseInt(getState(config.total_layers_entity)),
-    remainingTime: parseInt(getState(config.remaining_time_entity)),
+    remainingTime: getState(config.remaining_time_entity, '0'),
     bedTemp: parseFloat(getState(config.bed_temp_entity)),
     nozzleTemp: parseFloat(getState(config.nozzle_temp_entity)),
     speedProfile: getState(config.speed_profile_entity, 'standard'),
