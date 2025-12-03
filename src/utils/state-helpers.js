@@ -177,6 +177,10 @@ export const getEntityStates = (hass, config) => {
   const remainingTimeValue = remainingTimeEntity?.state || '0';
   const remainingTimeUnit = remainingTimeEntity?.attributes?.unit_of_measurement || 'min';
 
+  // Get end time from entity
+  const endTimeEntity = hass.states[config.end_time_entity];
+  const endTimeValue = endTimeEntity?.state || null;
+
   return {
     name: config.printer_name || 'Unnamed Printer',
     status: getState(config.print_status_entity, 'idle'),
@@ -187,6 +191,7 @@ export const getEntityStates = (hass, config) => {
     totalLayers: parseInt(getState(config.total_layers_entity)),
     remainingTime: remainingTimeValue,
     remainingTimeUnit: remainingTimeUnit,
+    endTime: endTimeValue,
     bedTemp: parseFloat(getState(config.bed_temp_entity)),
     nozzleTemp: parseFloat(getState(config.nozzle_temp_entity)),
     speedProfile: getState(config.speed_profile_entity, 'standard'),

@@ -10,6 +10,7 @@ export const DEFAULT_CONFIG = {
   current_layer_entity: 'sensor.p1s_01p00a382500072_current_layer',
   total_layers_entity: 'sensor.p1s_01p00a382500072_total_layer_count',
   remaining_time_entity: 'sensor.p1s_01p00a382500072_remaining_time',
+  end_time_entity: 'sensor.p1s_01p00a382500072_end_time',
   bed_temp_entity: 'sensor.p1s_01p00a382500072_bed_temperature',
   nozzle_temp_entity: 'sensor.p1s_01p00a382500072_nozzle_temperature',
   bed_target_temp_entity: 'number.p1s_01p00a382500072_bed_target_temperature',

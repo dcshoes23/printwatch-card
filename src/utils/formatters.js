@@ -71,28 +71,34 @@ export const formatDuration = (duration, unit = 'min', options = {}) => {
 };
 
 /**
- * Calculate and format the end time based on remaining minutes
- * @param {number} remainingMinutes - Remaining time in minutes
+ * Format end time from entity timestamp
+ * @param {string} endTimeValue - ISO timestamp from end_time entity
  * @param {object} hass - Home Assistant instance
- * @returns {string} Formatted end time
+ * @returns {string} Formatted end time in user's locale
  */
-export const formatEndTime = (remainingMinutes, hass) => {
-  if (!remainingMinutes || remainingMinutes <= 0 || !hass) {
+export const formatEndTime = (endTimeValue, hass) => {
+  if (!endTimeValue || endTimeValue === 'unknown' || endTimeValue === 'unavailable' || !hass) {
     return '---';
   }
 
   try {
-    const endTime = new Date(Date.now() + (remainingMinutes * 60000));
+    // Parse the ISO timestamp
+    const endTime = new Date(endTimeValue);
+
+    // Check if valid date
+    if (isNaN(endTime.getTime())) {
+      return '---';
+    }
+
     const timeFormat = {
-      hour: hass.locale.hour_24 ? '2-digit' : 'numeric',
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: !hass.locale.hour_24
+      hour12: !hass.locale?.time_format?.includes('24')
     };
 
-    return new Intl.DateTimeFormat(hass.locale.language, timeFormat)
-      .format(endTime)
-      .toLowerCase()
-      .replace(/\s/g, '');
+    // Format with user's locale
+    const formatted = new Intl.DateTimeFormat(hass.language || 'en-US', timeFormat).format(endTime);
+    return formatted;
   } catch (error) {
     console.warn('Error formatting end time:', error);
     return '---';
