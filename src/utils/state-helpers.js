@@ -117,16 +117,54 @@ export const getCameraEntityType = (entityId) => {
  * @returns {string|null} - The camera source URL
  */
 export const getCameraSource = (hass, entityId, entityType, timestamp = null) => {
-  if (!entityId || !hass.states[entityId]) return null;
+  console.log('[PrintWatch] getCameraSource called:', {
+    entityId,
+    entityType,
+    entityExists: !!hass.states[entityId],
+    entityState: hass.states[entityId]?.state,
+    entityAttributes: hass.states[entityId]?.attributes
+  });
+
+  if (!entityId) {
+    console.warn('[PrintWatch] No camera entity ID provided');
+    return null;
+  }
+
+  const entity = hass.states[entityId];
+  if (!entity) {
+    console.warn('[PrintWatch] Camera entity not found:', entityId);
+    return null;
+  }
 
   if (entityType === 'camera') {
-    // For camera entities, use the camera proxy API
-    return `/api/camera_proxy/${entityId}`;
+    // For camera entities, we need to use the access_token from attributes
+    const accessToken = entity.attributes?.access_token;
+
+    if (!accessToken) {
+      console.warn('[PrintWatch] No access_token found for camera entity:', entityId);
+      // Fallback to entity_picture if available (some cameras provide this)
+      const entityPicture = entity.attributes?.entity_picture;
+      if (entityPicture) {
+        console.log('[PrintWatch] Using entity_picture fallback for camera:', entityPicture);
+        return entityPicture;
+      }
+      return null;
+    }
+
+    // Use camera proxy with access token
+    const cameraUrl = `/api/camera_proxy/${entityId}?token=${accessToken}`;
+    console.log('[PrintWatch] Using camera proxy URL with token');
+    return cameraUrl;
   } else {
     // For image entities, use entity_picture with cache-busting timestamp
-    const entityPicture = hass.states[entityId]?.attributes?.entity_picture;
-    if (!entityPicture) return null;
-    return timestamp ? `${entityPicture}&t=${timestamp}` : entityPicture;
+    const entityPicture = entity?.attributes?.entity_picture;
+    if (!entityPicture) {
+      console.warn('[PrintWatch] No entity_picture found for image entity:', entityId);
+      return null;
+    }
+    const imageUrl = timestamp ? `${entityPicture}&t=${timestamp}` : entityPicture;
+    console.log('[PrintWatch] Using image URL:', imageUrl);
+    return imageUrl;
   }
 };
 

@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import { localize } from '../../utils/localize';
 
-export const cameraFeedTemplate = ({ isOnline, hasError, currentStage, cameraSource, cameraType, onError, onLoad }) => {
+export const cameraFeedTemplate = ({ isOnline, hasError, currentStage, cameraSource, cameraType, cameraEntity, onError, onLoad }) => {
   if (!isOnline || hasError) {
     return html`
       <div class="offline-message">
@@ -14,6 +14,7 @@ export const cameraFeedTemplate = ({ isOnline, hasError, currentStage, cameraSou
   }
 
   if (!cameraSource) {
+    console.warn('[PrintWatch] No camera source available for entity:', cameraEntity);
     return html`
       <div class="offline-message">
         <ha-icon icon="mdi:camera-off"></ha-icon>
@@ -22,6 +23,8 @@ export const cameraFeedTemplate = ({ isOnline, hasError, currentStage, cameraSou
     `;
   }
 
+  // For camera entities, we can optionally use ha-camera-stream for better streaming support
+  // But for now, let's use img with the camera proxy which should work for most cases
   return html`
     <div class="camera-feed">
       <div class="camera-label">${currentStage}</div>
