@@ -191,6 +191,21 @@ export const cardStyles = css`
     font-size: 14px;
   }
 
+  .time-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .time-left {
+    flex: 0 0 auto;
+  }
+
+  .time-end {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
   .progress-bar {
     height: 4px;
     background: var(--secondary-background-color);

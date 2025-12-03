@@ -3,7 +3,7 @@ import { LitElement, html } from 'lit';
 import { cardTemplate } from '../templates/card-template';
 import { cardStyles } from '../styles/card-styles';
 import { formatDuration, formatEndTime } from '../utils/formatters';
-import { isPrinting, isPaused, getAmsSlots, getEntityStates } from '../utils/state-helpers';
+import { isPrinting, isPaused, getAmsSlots, getEntityStates, getCameraEntityType } from '../utils/state-helpers';
 import { DEFAULT_CONFIG, DEFAULT_CAMERA_REFRESH_RATE } from '../constants/config';
 import { localize } from '../utils/localize';
 
@@ -31,6 +31,7 @@ class PrintWatchCard extends LitElement {
     this._cameraError = false;
     this._dialogConfig = { open: false };
     this._confirmDialog = { open: false };
+    this._cameraTimestamp = Date.now();
     this.formatters = {
       formatDuration,
       formatEndTime
@@ -55,6 +56,13 @@ class PrintWatchCard extends LitElement {
       return false;
     }
 
+    // Camera entities (live streaming) don't need periodic updates
+    const cameraType = getCameraEntityType(this.config.camera_entity);
+    if (cameraType === 'camera') {
+      return false;
+    }
+
+    // Only update image entities periodically
     const now = Date.now();
     return now - this._lastCameraUpdate > this._cameraUpdateInterval;
   }
@@ -102,21 +110,24 @@ class PrintWatchCard extends LitElement {
       return;
     }
 
-    this._lastCameraUpdate = Date.now();
-    
-    const timestamp = new Date().getTime();
-    const cameraImg = this.shadowRoot?.querySelector('.camera-feed img');
-    if (cameraImg) {
-      const cameraEntity = this.hass.states[this.config.camera_entity];
-      if (cameraEntity?.attributes?.entity_picture) {
-        cameraImg.src = `${cameraEntity.attributes.entity_picture}&t=${timestamp}`;
-      }
+    // Only update image entities - camera entities handle their own streaming
+    const cameraType = getCameraEntityType(this.config.camera_entity);
+    if (cameraType === 'camera') {
+      return;
     }
 
+    this._lastCameraUpdate = Date.now();
+    this._cameraTimestamp = Date.now();
+
+    // Trigger a re-render to update the timestamp in the template
+    this.requestUpdate();
+
+    // Also update cover image if it's an image entity
     const coverImg = this.shadowRoot?.querySelector('.preview-image img');
     if (coverImg) {
       const coverEntity = this.hass.states[this.config.cover_image_entity];
       if (coverEntity?.attributes?.entity_picture) {
+        const timestamp = new Date().getTime();
         coverImg.src = `${coverEntity.attributes.entity_picture}&t=${timestamp}`;
       }
     }
@@ -185,6 +196,7 @@ class PrintWatchCard extends LitElement {
       _toggleLight: () => this._toggleLight(),
       _toggleFan: () => this._toggleFan(),
       _cameraError: this._cameraError,
+      cameraTimestamp: this._cameraTimestamp,
       isOnline: this.isOnline(),
       handleImageError: () => this.handleImageError(),
       handleImageLoad: () => this.handleImageLoad(),

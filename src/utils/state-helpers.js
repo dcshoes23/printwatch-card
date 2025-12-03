@@ -98,9 +98,88 @@ const getLastPrintName = (hass, config) => {
     : null;
 };
 
+/**
+ * Detects the type of camera entity
+ * @param {string} entityId - The camera entity ID
+ * @returns {'camera'|'image'} - The entity type
+ */
+export const getCameraEntityType = (entityId) => {
+  if (!entityId) return 'image';
+  return entityId.startsWith('camera.') ? 'camera' : 'image';
+};
+
+/**
+ * Gets the camera source URL based on entity type
+ * @param {Object} hass - Home Assistant object
+ * @param {string} entityId - The camera entity ID
+ * @param {string} entityType - The entity type ('camera' or 'image')
+ * @param {number} timestamp - Cache-busting timestamp (only used for image entities)
+ * @returns {string|null} - The camera source URL
+ */
+export const getCameraSource = (hass, entityId, entityType, timestamp = null) => {
+  console.log('[PrintWatch] getCameraSource called:', {
+    entityId,
+    entityType,
+    entityExists: !!hass.states[entityId],
+    entityState: hass.states[entityId]?.state,
+    entityAttributes: hass.states[entityId]?.attributes
+  });
+
+  if (!entityId) {
+    console.warn('[PrintWatch] No camera entity ID provided');
+    return null;
+  }
+
+  const entity = hass.states[entityId];
+  if (!entity) {
+    console.warn('[PrintWatch] Camera entity not found:', entityId);
+    return null;
+  }
+
+  if (entityType === 'camera') {
+    // For camera entities, we need to use the access_token from attributes
+    const accessToken = entity.attributes?.access_token;
+
+    if (!accessToken) {
+      console.warn('[PrintWatch] No access_token found for camera entity:', entityId);
+      // Fallback to entity_picture if available (some cameras provide this)
+      const entityPicture = entity.attributes?.entity_picture;
+      if (entityPicture) {
+        console.log('[PrintWatch] Using entity_picture fallback for camera:', entityPicture);
+        return entityPicture;
+      }
+      return null;
+    }
+
+    // Use camera proxy with access token
+    const cameraUrl = `/api/camera_proxy/${entityId}?token=${accessToken}`;
+    console.log('[PrintWatch] Using camera proxy URL with token');
+    return cameraUrl;
+  } else {
+    // For image entities, use entity_picture with cache-busting timestamp
+    const entityPicture = entity?.attributes?.entity_picture;
+    if (!entityPicture) {
+      console.warn('[PrintWatch] No entity_picture found for image entity:', entityId);
+      return null;
+    }
+    const imageUrl = timestamp ? `${entityPicture}&t=${timestamp}` : entityPicture;
+    console.log('[PrintWatch] Using image URL:', imageUrl);
+    return imageUrl;
+  }
+};
+
 export const getEntityStates = (hass, config) => {
-  const getState = (entity, defaultValue = '0') => 
+  const getState = (entity, defaultValue = '0') =>
     hass.states[entity]?.state || defaultValue;
+
+  // Get remaining time with unit information
+  const remainingTimeEntity = hass.states[config.remaining_time_entity];
+  const remainingTimeValue = remainingTimeEntity?.state || '0';
+  const remainingTimeUnit = remainingTimeEntity?.attributes?.unit_of_measurement || 'min';
+
+  // Get end time from entity
+  const endTimeEntity = hass.states[config.end_time_entity];
+  const endTimeValue = endTimeEntity?.state || null;
 
   return {
     name: config.printer_name || 'Unnamed Printer',
@@ -110,7 +189,9 @@ export const getEntityStates = (hass, config) => {
     progress: parseFloat(getState(config.progress_entity)),
     currentLayer: parseInt(getState(config.current_layer_entity)),
     totalLayers: parseInt(getState(config.total_layers_entity)),
-    remainingTime: parseInt(getState(config.remaining_time_entity)),
+    remainingTime: remainingTimeValue,
+    remainingTimeUnit: remainingTimeUnit,
+    endTime: endTimeValue,
     bedTemp: parseFloat(getState(config.bed_temp_entity)),
     nozzleTemp: parseFloat(getState(config.nozzle_temp_entity)),
     speedProfile: getState(config.speed_profile_entity, 'standard'),

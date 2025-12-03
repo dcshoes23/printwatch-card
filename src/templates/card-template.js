@@ -7,6 +7,7 @@ import { temperatureDisplayTemplate } from './components/temperature-display';
 import { materialSlotsTemplate } from './components/material-slots';
 import { temperatureDialogTemplate } from './components/temperature-controls';
 import { confirmDialogTemplate } from './components/confirm-dialog';
+import { getCameraEntityType, getCameraSource } from '../utils/state-helpers';
 
 export const cardTemplate = (context) => {
   const { 
@@ -36,11 +37,15 @@ export const cardTemplate = (context) => {
     hass
   };
 
+  const cameraType = getCameraEntityType(entities.camera_entity);
   const cameraProps = {
     isOnline,
     hasError: _cameraError,
     currentStage: entities.currentStage,
-    entityPicture: hass.states[entities.camera_entity]?.attributes?.entity_picture,
+    cameraSource: getCameraSource(hass, entities.camera_entity, cameraType, context.cameraTimestamp),
+    cameraType,
+    cameraEntity: entities.camera_entity,
+    hass,
     onError: context.handleImageError,
     onLoad: context.handleImageLoad
   };
