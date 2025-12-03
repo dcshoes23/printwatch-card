@@ -45,6 +45,7 @@ export const cardTemplate = (context) => {
     cameraSource: getCameraSource(hass, entities.camera_entity, cameraType, context.cameraTimestamp),
     cameraType,
     cameraEntity: entities.camera_entity,
+    hass,
     onError: context.handleImageError,
     onLoad: context.handleImageLoad
   };
